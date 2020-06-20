@@ -1,0 +1,8 @@
+---
+# vars file for wp-configure-role
+# comment these vars if you have uncommented vars_prompt in wordpress.yml
+
+  db_root_password: "12345"
+  wp_db_user: "wpuser"
+  wp_db_pass: "wppassword"
+  wp_db: "wpdatabase"

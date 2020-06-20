@@ -1,0 +1,43 @@
+#ansible playbook to install wordpress site on centos 7
+# run playbook with -K option to enter sudo pass for user
+---
+#install packages apache and php and mariadb
+- hosts: wpservers
+  become: true
+# uncomment vars_prompt if want to manually enter password , else save passwords and username in vars of individual role
+  # vars_prompt:
+  #   - name: "db_root_password"
+  #     prompt: "Enter password to set for root user for mariadb"
+  #   - name: "wp_db_user"
+  #     prompt: "Enter USERNAME to set for WP-database"
+  #   - name: "wp_db_pass"
+  #     prompt: "Enter PASSWORD to set for WP-user"
+  #   - name: "wp_db"
+  #     prompt: "Enter DATABASE NAME  to set for WP"
+
+  tasks:
+    - name : Installing packages
+      yum :
+        pkg: ['httpd', 'mariadb-server', 'mariadb', 'php', 'php-mysql', 'mysql-devel', 'python2-PyMySQL']
+        state: latest
+     
+    - name: starting mariadb-server
+      service: name=mariadb state=started enabled=yes
+      
+# Importing role for database configuration - secure installatio and configuration for wordpress
+    - name : Configuring Mariadb-secure-installation using role
+      import_role: 
+        name : wp-configure-role    
+
+    - name: Restarting http-server
+      service: name=httpd state=restarted
+
+    - name: Opening http port in firewall
+      firewalld:
+        port: 80/tcp
+        permanent: yes
+        state: enabled
+        
+    - name: Restarting Firewalld Service
+      service: name=firewalld state=restarted
+    

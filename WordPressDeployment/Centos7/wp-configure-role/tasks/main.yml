@@ -1,0 +1,100 @@
+---
+# tasks file for wp-configure-role
+
+### mariabd-secure-installation
+# Setting up root password
+- name: Set the root password 
+  mysql_user: login_user=root login_password="" user=root password="{{ db_root_password }}"
+  ignore_errors: yes
+# Securing root user for local host IpV4 and IpV6
+- name: Secure the root user for IPV6 localhost (::1)
+  mysql_user: login_user=root login_password="{{ db_root_password }}" user=root password="{{ db_root_password }}" host="::1"
+
+- name: Secure the root user for IPV4 localhost (127.0.0.1)
+  mysql_user: login_user=root login_password="{{ db_root_password }}" user=root password="{{ db_root_password }}" host="127.0.0.1"
+
+- name: Secure the root user for localhost domain
+  mysql_user: login_user=root login_password="{{ db_root_password }}" user=root password="{{ db_root_password }}" host="localhost"
+# - name: Secure the root user for server_hostname domain
+#   mysql_user: login_user=root login_password="{{ db_root_password }}" user=root password="{{ db_root_password }}" host="{{ ansible_fqdn }}"
+
+# Delete anonymous User
+- name: Deletes anonymous server user
+  mysql_user: login_user=root login_password="{{ db_root_password }}" user="" host_all=yes state=absent
+# Remove test Database
+- name: Removes the test database
+  mysql_db: login_user=root login_password="{{ db_root_password }}" db=test state=absent
+
+########### setting up wordpress database and user 
+# Create databse for Wordpress
+- name: Create WP database
+  mysql_db: login_user=root login_password="{{ db_root_password }}" db="{{ wp_db }}" state=present
+# Create 
+- name: Create WP user and graning permission
+  mysql_user: 
+    login_user: root 
+    login_password: "{{ db_root_password }}"  
+    name: "{{ wp_db_user }}" 
+    password: "{{ wp_db_pass }}"  
+    state: present 
+    priv:  '*.*:ALL,GRANT'
+
+
+# tasks file for wordpress-aws Installation
+# Downloading Wordpress tarball 
+- name: Downloading Wordpress
+  get_url:
+    url: https://wordpress.org/wordpress-5.1.1.tar.gz
+    dest: /tmp/
+    #mode: '0440'
+# Extracting Wordpress tarball 
+- name: Extracting Wordpress
+  unarchive:
+    src: /tmp/wordpress-5.1.1.tar.gz
+    dest: /tmp/
+    remote_src: yes
+# Syncing files to correct destination 
+- name: Syncing wordpress content to /html
+  shell: rsync -avP /tmp/wordpress/ /var/www/html/
+
+# # syncing files to correct destination 
+# - name: Synchronization of wordpress content
+#   synchronize:
+#     src: /tmp/wordpress
+#     dest: /var/www/html/
+
+# Copying config from sample config file
+- name: Creating Config file for wp
+  copy:
+    src: /var/www/html/wp-config-sample.php 
+    dest: /var/www/html/wp-config.php
+    remote_src: yes
+# Adding DatabaseName in wp-config.php file
+- name: Adding DatabaseName in config 
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: '(database_name_here)'
+    replace: '{{wp_db}}'
+
+# Adding UserName in wp-config.php file
+- name: Adding Username in config file
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: '(username_here)'
+    replace: '{{wp_db_user}}'
+
+# Adding Password in wp-config.php file
+- name: Adding Password in config file
+  replace:
+    path: /var/www/html/wp-config.php
+    regexp: '(password_here)'
+    replace: '{{wp_db_pass}}'
+
+# Setting up ownership of  Wordpress folder 
+- name: Setting up permission for Wordpress
+  file:
+    path: /var/www/html/
+    state: directory
+    recurse: yes
+    owner: apache
+    group: apache
