@@ -1,0 +1,7 @@
+---
+# vars file for wordpress-aws role
+
+  db_root_password: "12345"
+  wp_db_user: "wpuser"
+  wp_db_pass: "wppassword"
+  wp_db: "wpdatabase"

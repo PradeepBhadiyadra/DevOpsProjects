@@ -1,0 +1,46 @@
+#ansible playbook to install wordpress site on AWS-EC2
+# change value specific to aws on line #11,12,14,31
+---
+#### creating EC2 Instance
+- name: Creating EC2 Instance
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: Creating EC2 Instance
+      ec2:
+         key_name: KeyPairName            # Name of KeyPair specific to region
+         group: SecurityGroupName         # Name of SecurityGroup specific to region
+         instance_type: t2.micro          
+         image: ami-0f75c2980c6a5851d     # AMI-id specific to Region
+         wait: true
+         region: us-east-1     
+      register: ec2
+
+    - name: Printing all ec2 variables
+      debug: var=ec2
+
+    - name: Getting public Ip address of EC2
+      debug: var=ec2.instances[0].public_dns_name
+
+    - name: adding host to group wp-servers
+      add_host:
+        name: "{{ ec2.instances[0].public_dns_name }}"
+        groups: wpservers
+        ansible_host: "{{ ec2.instances[0].public_dns_name }}"
+        ansible_ssh_user: ec2-user
+        ansible_ssh_private_key_file: /path/to/pem/key.pem  # path to ssh key.pem
+   
+    - name: Wait for a while
+      pause: seconds=60
+
+#installing packages apache and php and mariadb
+- name: Installing packages apache and php and mariadb
+  hosts: wpservers
+  become: yes
+  tasks:
+    - name : Configuring Mariadb-secure-installation using role
+      import_role: 
+        name : wordpress-aws    
+
+    - name: Restarting http-server
+      service: name=httpd state=restarted
